@@ -1,0 +1,16 @@
+{
+  "name": "boggle",
+  "private": true,
+  "workspaces": [
+    "src/shared",
+    "src/server",
+    "src/client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n shared,server,client -c cyan,green,blue \"npm run dev -w src/shared\" \"npm run dev -w src/server\" \"npm run dev -w src/client\"",
+    "build": "npm run build -w src/shared && npm run build -w src/server && npm run build -w src/client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

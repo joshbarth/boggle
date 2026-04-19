@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "composite": true,
+    "sourceMap": true
+  },
+  "include": ["src", "../shared/src/types.ts"],
+  "references": [{ "path": "../shared" }]
+}
