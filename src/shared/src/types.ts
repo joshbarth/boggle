@@ -32,8 +32,6 @@ export type GameConfig = {
   canJoinInProgress: boolean;
 };
 
-export type GameConfigOverrides = Partial<GameConfig>;
-
 export type Board = string[][]; // 2D array of letters
 
 export type FoundWord = {

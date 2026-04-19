@@ -53,8 +53,12 @@ export function getNextLetters(
   visited: Set<[number, number]>,
 ): string[] {
   const nextLetters: string[] = [];
+  const visitedSet = new Set<string>();
+  for (const [row, col] of visited) {
+    visitedSet.add(`${row},${col}`);
+  }
   for (const [row, col] of neighbors) {
-    if (!visited.has([row, col])) {
+    if (!visitedSet.has(`${row},${col}`)) {
       nextLetters.push(board[row][col]);
     }
   }
@@ -85,7 +89,9 @@ export function generateBoard(gameConfig: GameConfig): Board {
         );
       }
 
-      const randomDiceAdjustment = Math.random() * availableDiceCount;
+      const randomDiceAdjustment = Math.floor(
+        Math.random() * availableDiceCount,
+      );
       let count = 0;
       for (let i = 0; i < diceSet.length; i++) {
         if (usedDiceIndices.has(i)) continue;
