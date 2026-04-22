@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateBoard, getNeighbors, getNextLetters, isSquare } from "./board";
+import { generateBoard, getNeighbors, getNextLetters, isSquare, isWordOnBoard } from "./board";
 import { GameConfig } from "./types";
 
 // Minimal GameConfig for generateBoard tests
@@ -96,7 +96,13 @@ describe("getNextLetters", () => {
       [1, 0],
     ];
     const visited = new Set<[number, number]>();
-    expect(getNextLetters(board, neighbors, visited)).toEqual(["A", "B", "C"]);
+    const result = getNextLetters(board, neighbors, visited);
+    const entries = [...result.entries()].map(([[r, c], v]) => ({ r, c, v }));
+    expect(entries).toEqual([
+      { r: 0, c: 0, v: ["A"] },
+      { r: 0, c: 1, v: ["B"] },
+      { r: 1, c: 0, v: ["C"] },
+    ]);
   });
 
   it("excludes visited cells", () => {
@@ -109,10 +115,12 @@ describe("getNextLetters", () => {
       [0, 0],
       [1, 0],
     ]);
-    expect(getNextLetters(board, neighbors, visited)).toEqual(["B"]);
+    const result = getNextLetters(board, neighbors, visited);
+    const entries = [...result.entries()].map(([[r, c], v]) => ({ r, c, v }));
+    expect(entries).toEqual([{ r: 0, c: 1, v: ["B"] }]);
   });
 
-  it("returns empty array when all neighbors are visited", () => {
+  it("returns an empty map when all neighbors are visited", () => {
     const neighbors: [number, number][] = [
       [0, 0],
       [0, 1],
@@ -121,7 +129,7 @@ describe("getNextLetters", () => {
       [0, 0],
       [0, 1],
     ]);
-    expect(getNextLetters(board, neighbors, visited)).toEqual([]);
+    expect(getNextLetters(board, neighbors, visited).size).toBe(0);
   });
 });
 
@@ -160,5 +168,62 @@ describe("generateBoard", () => {
     const board = generateBoard(config);
     expect(board.flat()).toHaveLength(16);
     expect(board.flat().every((l) => l === "A")).toBe(true);
+  });
+});
+
+describe("isWordOnBoard", () => {
+  const board = [
+    ["C", "A", "T"],
+    ["D", "O", "G"],
+    ["B", "I", "R"],
+  ];
+
+  it("finds a word that exists on the board", () => {
+    const [found, path] = isWordOnBoard(board, "CAT");
+    expect(found).toBe(true);
+    expect(path).toHaveLength(3);
+  });
+
+  it("returns false for a word not on the board", () => {
+    const [found] = isWordOnBoard(board, "ZZZ");
+    expect(found).toBe(false);
+  });
+
+  it("returns false when the word requires reusing a cell", () => {
+    const [found] = isWordOnBoard(board, "CATA");
+    expect(found).toBe(false);
+  });
+
+  it("returns the longest matching prefix path when word is not found", () => {
+    const [found, path] = isWordOnBoard(board, "CATS");
+    expect(found).toBe(false);
+    expect(path.length).toBeGreaterThan(0);
+  });
+
+  it("returns empty path when no prefix matches", () => {
+    const [found, path] = isWordOnBoard(board, "ZZZ");
+    expect(found).toBe(false);
+    expect(path).toHaveLength(0);
+  });
+
+  it("finds a word using wrap-around", () => {
+    const wrapBoard = [
+      ["A", "B"],
+      ["C", "D"],
+    ];
+    // D is at (1,1), A is at (0,0) — not adjacent normally, but adjacent with wrap-around
+    const [found] = isWordOnBoard(wrapBoard, "DA", true);
+    expect(found).toBe(true);
+  });
+
+  it("does not find a word requiring non-adjacent cells when wrapAround is false", () => {
+    // D at (2,2) and A at (0,0) are not adjacent on a 3x3 board
+    const sparse = [
+      ["A", "X", "X"],
+      ["X", "X", "X"],
+      ["X", "X", "D"],
+    ];
+    const [found] = isWordOnBoard(sparse, "DA", false);
+    expect(found).toBe(false);
   });
 });
