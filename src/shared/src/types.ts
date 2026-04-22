@@ -66,3 +66,8 @@ export type GameState = {
   history: RoundSummary[]; // summaries of completed rounds
   scores: Map<string, number>; // current cumulative scores
 };
+
+export type WordTrieNode = {
+  children: Map<string, WordTrieNode>;
+  isWord: boolean;
+};
