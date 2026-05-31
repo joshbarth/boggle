@@ -1,11 +1,15 @@
-import { Board, GameConfig } from "./types";
+import { Board, Die } from "./types";
+
+export function serializeCoords(row: number, col: number): string {
+  return `${row},${col}`;
+}
 
 export function isSquare(board: Board): boolean {
   const rowCount = board.length;
-  if (rowCount === 0) return true; // An empty board is considered square
+  if (rowCount === 0) return false;
 
   const colCount = board[0].length;
-  if (colCount === 0) return true; // A board with empty rows is considered square
+  if (colCount === 0) return false;
 
   return board.every((row) => row.length === colCount);
 }
@@ -50,24 +54,22 @@ export function getNeighbors(
 export function getNextLetters(
   board: Board,
   neighbors: [number, number][],
-  visited: Set<[number, number]>,
-): Map<[number, number], string[]> {
-  const nextLetters: Map<[number, number], string[]> = new Map();
-  const visitedSet = new Set<string>();
-  for (const [row, col] of visited) {
-    visitedSet.add(`${row},${col}`);
-  }
+  visited: Set<string>,
+): Map<[number, number], string> {
+  const nextLetters: Map<[number, number], string> = new Map();
   for (const [row, col] of neighbors) {
-    if (!visitedSet.has(`${row},${col}`)) {
-      nextLetters.set([row, col], [board[row][col]]);
+    if (!visited.has(serializeCoords(row, col))) {
+      nextLetters.set([row, col], board[row][col]);
     }
   }
   return nextLetters;
 }
 
-export function generateBoard(gameConfig: GameConfig): Board {
-  const { boardSize, diceSet, diceReplace } = gameConfig;
-
+export function generateBoard(
+  boardSize: number,
+  diceSet: Die[],
+  diceReplace: boolean = false,
+): Board {
   if (diceSet.length === 0) {
     throw new Error("Dice set cannot be empty");
   }
@@ -120,7 +122,7 @@ export function generateBoard(gameConfig: GameConfig): Board {
   return board;
 }
 
-// Returns whether the word can be formed on the board, adn the path of coordinates for the word
+// Returns whether the word can be formed on the board, and the path of coordinates for the word
 // If the word is not found, returns the longest prefix path found (which may be empty)
 export function isWordOnBoard(
   board: Board,
@@ -133,37 +135,45 @@ export function isWordOnBoard(
   function dfs(
     row: number,
     col: number,
-    index: number,
-    visited: Set<string>,
+    index: number = 0,
+    visited: Set<string> = new Set(),
   ): [boolean, [number, number][]] {
     if (board[row][col] !== word[index]) {
       return [false, []];
     }
 
-    const newVisited = new Set(visited);
-    newVisited.add(`${row},${col}`);
-
     if (index === wordLength - 1) {
       return [true, [[row, col]]];
     }
 
+    const newVisited = new Set(visited);
+    newVisited.add(serializeCoords(row, col));
+
     const neighbors = getNeighbors(board, row, col, wrapAround);
-    for (const [nRow, nCol] of neighbors) {
-      if (newVisited.has(`${nRow},${nCol}`)) continue;
+    const nextLetters = getNextLetters(board, neighbors, newVisited);
+    const potentialPaths: [number, number][][] = [];
+    for (const [[nRow, nCol], _] of nextLetters) {
       const [found, path] = dfs(nRow, nCol, index + 1, newVisited);
       if (found) {
         return [true, [[row, col], ...path]];
       }
+      if (path.length > 0) {
+        potentialPaths.push([[row, col], ...path]);
+      }
     }
 
-    return [false, [[row, col]]];
+    const longestPath = potentialPaths.reduce(
+      (longest, current) => (current.length > longest.length ? current : longest),
+      [[row, col]],
+    );
+    return [false, longestPath];
   }
 
   const potentialPaths: [number, number][][] = [];
 
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
-      const [found, path] = dfs(row, col, 0, new Set());
+      const [found, path] = dfs(row, col);
       if (found) {
         return [true, path];
       }

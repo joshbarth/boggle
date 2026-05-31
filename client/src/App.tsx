@@ -1,7 +1,7 @@
 function App() {
   return (
     <div>
-      <h1>Boggle</h1>
+      <h1 className="luckiest-guy-regular">Boggers, Dude</h1>
     </div>
   );
 }

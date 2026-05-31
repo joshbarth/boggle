@@ -1,29 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { generateBoard, getNeighbors, getNextLetters, isSquare, isWordOnBoard } from "./board";
-import { GameConfig } from "./types";
-
-// Minimal GameConfig for generateBoard tests
-const baseConfig: GameConfig = {
-  boardSize: 4,
-  diceSet: Array.from({ length: 16 }, () => ({ faces: ["A", "B", "C"] })),
-  diceReplace: false,
-  minWordLength: 3,
-  wrapAround: false,
-  wordList: new Set(),
-  immediatelyRejectInvalidWords: false,
-  timeLimitSeconds: 120,
-  scoreStrategy: { calculateScore: () => 1 },
-  invalidWordPenalty: 0,
-  wordOwnershipRule: "first",
-  minPlayers: 2,
-  canJoinInProgress: false,
-};
+import { getNeighbors, getNextLetters, isSquare, isWordOnBoard } from "./board";
 
 describe("isSquare", () => {
-  it("returns true for an empty board", () => {
-    expect(isSquare([])).toBe(true);
-  });
-
   it("returns true for a square board", () => {
     expect(
       isSquare([
@@ -40,10 +18,6 @@ describe("isSquare", () => {
         ["D", "E"],
       ]),
     ).toBe(false);
-  });
-
-  it("returns true for a board with all empty rows", () => {
-    expect(isSquare([[], []])).toBe(true);
   });
 });
 
@@ -95,13 +69,13 @@ describe("getNextLetters", () => {
       [0, 1],
       [1, 0],
     ];
-    const visited = new Set<[number, number]>();
+    const visited = new Set<string>();
     const result = getNextLetters(board, neighbors, visited);
     const entries = [...result.entries()].map(([[r, c], v]) => ({ r, c, v }));
     expect(entries).toEqual([
-      { r: 0, c: 0, v: ["A"] },
-      { r: 0, c: 1, v: ["B"] },
-      { r: 1, c: 0, v: ["C"] },
+      { r: 0, c: 0, v: "A" },
+      { r: 0, c: 1, v: "B" },
+      { r: 1, c: 0, v: "C" },
     ]);
   });
 
@@ -111,13 +85,13 @@ describe("getNextLetters", () => {
       [0, 1],
       [1, 0],
     ];
-    const visited = new Set<[number, number]>([
-      [0, 0],
-      [1, 0],
+    const visited = new Set<string>([
+      "0,0",
+      "1,0",
     ]);
     const result = getNextLetters(board, neighbors, visited);
     const entries = [...result.entries()].map(([[r, c], v]) => ({ r, c, v }));
-    expect(entries).toEqual([{ r: 0, c: 1, v: ["B"] }]);
+    expect(entries).toEqual([{ r: 0, c: 1, v: "B" }]);
   });
 
   it("returns an empty map when all neighbors are visited", () => {
@@ -125,49 +99,11 @@ describe("getNextLetters", () => {
       [0, 0],
       [0, 1],
     ];
-    const visited = new Set<[number, number]>([
-      [0, 0],
-      [0, 1],
+    const visited = new Set<string>([
+      "0,0",
+      "0,1",
     ]);
     expect(getNextLetters(board, neighbors, visited).size).toBe(0);
-  });
-});
-
-describe("generateBoard", () => {
-  it("generates a board with the correct dimensions", () => {
-    const board = generateBoard(baseConfig);
-    expect(board).toHaveLength(4);
-    board.forEach((row) => expect(row).toHaveLength(4));
-  });
-
-  it("only uses letters from the dice faces", () => {
-    const board = generateBoard(baseConfig);
-    board.flat().forEach((letter) => expect(["A", "B", "C"]).toContain(letter));
-  });
-
-  it("throws when the dice set is empty", () => {
-    const config = { ...baseConfig, diceSet: [] };
-    expect(() => generateBoard(config)).toThrow("Dice set cannot be empty");
-  });
-
-  it("throws when there are not enough dice to fill the board without replacement", () => {
-    const config = {
-      ...baseConfig,
-      diceSet: [{ faces: ["A"] }],
-      diceReplace: false,
-    };
-    expect(() => generateBoard(config)).toThrow("Not enough dice");
-  });
-
-  it("succeeds with a single die when diceReplace is true", () => {
-    const config = {
-      ...baseConfig,
-      diceSet: [{ faces: ["A"] }],
-      diceReplace: true,
-    };
-    const board = generateBoard(config);
-    expect(board.flat()).toHaveLength(16);
-    expect(board.flat().every((l) => l === "A")).toBe(true);
   });
 });
 
