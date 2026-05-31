@@ -2,7 +2,7 @@ import { loadWordList } from "@boggle/shared";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const defaultWordListId = "default";
+export const defaultWordListId = "default";
 
 export interface WordListStore {
   getWordList(id?: string): Set<string>;

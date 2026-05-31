@@ -14,7 +14,7 @@ const diceSetPath = "../dicesets/boggle_classic_dice.txt";
 async function start() {
   const wordListStore = await newWordListStore(wordListPath);
   const diceSetStore = await newDiceSetStore(diceSetPath);
-  const boardStore = newBoardStore();
+  const boardStore = newBoardStore(diceSetStore, wordListStore);
 
   app.use(cors());
   app.use(express.json());
@@ -28,40 +28,66 @@ async function start() {
   });
 
   app.get("/api/board/:boardId", (
-    req: Request<{ boardId?: string }, {}, {}, {}>,
-    res) => {
-      console.debug(`GET request for /api/board/${req.params.boardId}`);
-      if (!req.params.boardId) {
-        res.status(400).json({ error: "bad request" });
-        return;
-      }
-
-      const boardRecord = boardStore.getBoard(req.params.boardId);
-
-      if (!boardRecord) {
-        res.status(404).json({ error: "not found" });
-        return;
-      }
-
-      res.json(boardRecord);
-    });
-
-  app.get("/api/solve-random-board", (
-    req: Request<{}, {}, {}, { wraparound?: string }>,
+    req: Request<{ boardId?: string }>,
     res
   ) => {
-    const wraparound = req.query.wraparound === "true";
-    const dice = diceSetStore.getDiceSet();
-    const wordList = wordListStore.getWordList();
-    const boardRecord = boardStore.createRandomBoard(dice);
-    const solution = boardStore.solveBoardById(
-      boardRecord.id,
-      wordList,
-      wraparound);
+    if (!req.params.boardId) {
+      res.status(400).json({ error: "bad request" });
+      return;
+    }
+    const boardRecord = boardStore.getBoard(req.params.boardId);
+    if (!boardRecord) {
+      res.status(404).json({ error: "not found" });
+      return;
+    }
+    res.json(boardRecord);
+  });
 
+  app.post("/api/board/new", (
+    req: Request<{}, {}, {
+      size?: number,
+      diceSet?: string,
+      reuseDice?: boolean
+    }>,
+    res
+  ) => {
+    const size = req.body.size ?? 4;
+    const reuseDice = req.body.reuseDice ?? false;
+    if (size < 1 || size > 5) {
+      res.status(400).json({ error: "invalid board size" });
+      return;
+    }
+
+    const boardRecord = boardStore.createRandomBoard(
+      req.body.diceSet,
+      size,
+      reuseDice);
+    res.send(boardRecord);
+  });
+
+  app.post("/api/board/:boardId/solve", (
+    req: Request<{ boardId?: string }, {}, {
+      wordList?: string,
+      wrapAround?: boolean,
+    }>,
+    res
+  ) => {
+    if (!req.params.boardId) {
+      res.status(400).json({ error: "bad request" });
+      return;
+    }
+
+    const boardRecord = boardStore.getBoard(req.params.boardId);
+    if (!boardRecord) {
+      res.status(404).json({ error: "not found" });
+      return;
+    }
+
+    const solution = boardStore.solveBoardById(
+      req.params.boardId,
+      req.body.wordList,
+      req.body.wrapAround);
     res.json({
-      boardId: boardRecord.id,
-      board: boardRecord.board,
       solution: [...solution]
     });
   });
