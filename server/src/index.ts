@@ -4,12 +4,15 @@ import path from "node:path";
 import { newWordListStore } from "./wordSets";
 import { newDiceSetStore } from "./diceSets";
 import { newBoardStore } from "./boards";
+import { isSquare } from "@boggle/shared";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
 const wordListPath = "../words/enable1.txt";
 const diceSetPath = "../dicesets/boggle_classic_dice.txt";
+
+const boardSizeLimit = 5;
 
 async function start() {
   const wordListStore = await newWordListStore(wordListPath);
@@ -43,6 +46,36 @@ async function start() {
     res.json(boardRecord);
   });
 
+  app.post("/api/board", (
+    req: Request<{}, {}, {
+      board?: string[][]
+    }>,
+    res
+  ) => {
+    const board = req.body.board;
+    if (!board) {
+      res.status(400).json({ error: "bad request" });
+      return;
+    }
+    if (!isSquare(board)) {
+      res.status(400).json({ error: "board must be square" });
+    }
+
+    if (board.length > boardSizeLimit) {
+      res.status(400).json({
+        error: `board cannot be bigger than ${boardSizeLimit}`
+      });
+    }
+
+    const id = boardStore.createBoard(board);
+    if (!id) {
+      res.status(500).json({ error: "unexpected error creating board" });
+      return;
+    }
+
+    res.send({ id: id });
+  });
+
   app.post("/api/board/new", (
     req: Request<{}, {}, {
       size?: number,
@@ -53,7 +86,7 @@ async function start() {
   ) => {
     const size = req.body.size ?? 4;
     const reuseDice = req.body.reuseDice ?? false;
-    if (size < 1 || size > 5) {
+    if (size < 1 || size > boardSizeLimit) {
       res.status(400).json({ error: "invalid board size" });
       return;
     }
@@ -62,6 +95,11 @@ async function start() {
       req.body.diceSet,
       size,
       reuseDice);
+
+    if (!boardRecord) {
+      res.status(500).json({ error: "unexpected error creating board" });
+      return;
+    }
     res.send(boardRecord);
   });
 

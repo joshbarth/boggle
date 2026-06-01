@@ -1,4 +1,4 @@
-import { Board, generateBoard, solveBoard } from "@boggle/shared";
+import { Board, generateBoard, isSquare, solveBoard } from "@boggle/shared";
 import { DiceSetStore } from "./diceSets";
 import { defaultWordListId, WordListStore } from "./wordSets";
 
@@ -20,7 +20,8 @@ export interface BoardStore {
     diceSetId?: string,
     size?: number,
     reuseDice?: boolean
-  ): BoardRecord;
+  ): BoardRecord | undefined;
+  createBoard(board: Board): string | undefined;
   getBoard(id: string): BoardRecord | undefined;
   solveBoardById(
     id: string,
@@ -42,23 +43,37 @@ export function newBoardStore(
 ): BoardStore {
   const boards: Map<string, InternalBoardRecord> = new Map();
 
-  function createRandomBoard(
-    diceSetId?: string,
-    size?: number,
-    reuseDice?: boolean,
-  ): BoardRecord {
-    const dice = diceSetStore.getDiceSet(diceSetId);
-    const board = generateBoard(size ?? defaultSize, dice, reuseDice ?? false);
+  function createBoard(board: Board): string | undefined {
+    if(!isSquare(board)) {
+      return;
+    }
     const id = crypto.randomUUID();
-
     const boardRecord = {
       id: id,
       board: board,
       solutions: new Map()
-    };
+    }
 
     boards.set(id, boardRecord);
-    return boardRecord;
+    return id;
+  }
+
+  function createRandomBoard(
+    diceSetId?: string,
+    size?: number,
+    reuseDice?: boolean,
+  ): BoardRecord | undefined {
+    const dice = diceSetStore.getDiceSet(diceSetId);
+    const board = generateBoard(size ?? defaultSize, dice, reuseDice ?? false);
+    const id = createBoard(board);
+    if (!id) {
+      return;
+    }
+
+    return {
+      id: id,
+      board: board
+    };
   }
 
   function solveBoardById(
@@ -74,10 +89,8 @@ export function newBoardStore(
     const solutionKey = serializeSolverParams(wordListId, wrapAround);
     let solution = boardRecord.solutions.get(solutionKey);
     if (solution) {
-      console.log(`cache hit on ${id} for ${solutionKey}`);
       return solution;
     }
-    console.log(`cache miss on ${id} for ${solutionKey}`);
 
     const board = boardRecord.board;
     const wordList = wordListStore.getWordList(wordListId);
@@ -87,6 +100,7 @@ export function newBoardStore(
   }
 
   return {
+    createBoard: createBoard,
     createRandomBoard: createRandomBoard,
     getBoard: (id: string) => boards.get(id),
     solveBoardById: solveBoardById

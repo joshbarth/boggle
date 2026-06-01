@@ -9,7 +9,7 @@ export function isSquare(board: Board): boolean {
   if (rowCount === 0) return false;
 
   const colCount = board[0].length;
-  if (colCount === 0) return false;
+  if (rowCount !== colCount) return false;
 
   return board.every((row) => row.length === colCount);
 }
